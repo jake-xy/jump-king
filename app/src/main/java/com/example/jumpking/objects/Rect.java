@@ -28,8 +28,8 @@ public class Rect {
 
     public boolean collides(int x, int y) {
 
-        if (x >= this.x && x <= this.x + this.w) {
-            if (y >= this.y && y <= this.y + this.h) {
+        if (x > this.x && x < this.x + this.w) {
+            if (y > this.y && y < this.y + this.h) {
                 return true;
             }
         }
@@ -54,12 +54,20 @@ public class Rect {
         updateRect();
     }
 
-
     public void setX(double x) {
         this.x = x;
         updateRect();
     }
 
+    public void setHeight(double h) {
+        this.h = h;
+        updateRect();
+    }
+
+    public void setWidth(double w) {
+        this.w = w;
+        updateRect();
+    }
 
     public void moveY(double val) {
         this.y += val;
