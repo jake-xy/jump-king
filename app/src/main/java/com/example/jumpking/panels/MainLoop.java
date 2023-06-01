@@ -3,6 +3,7 @@ package com.example.jumpking.panels;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.util.Log;
 
@@ -12,6 +13,7 @@ import com.example.jumpking.Game;
 import com.example.jumpking.R;
 import com.example.jumpking.objects.Jumper;
 import com.example.jumpking.objects.Level;
+import com.example.jumpking.objects.Rect;
 import com.example.jumpking.objects.XButton;
 
 public class MainLoop {
@@ -19,9 +21,9 @@ public class MainLoop {
     Game game;
     public boolean active = false;
     Jumper king;
-    int floorLevel = 0;
+    int level = 0;
     Level currentLevel;
-    Level[] levels = new Level[20];
+    Level[] levels = new Level[164];
 
 //    public XButton[] dPads = new XButton[3];
     public XButton lButton, rButton, uButton;
@@ -29,11 +31,11 @@ public class MainLoop {
     public MainLoop(Game game) {
         this.game = game;
         // initialize the levels
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 12; i++) {
             levels[i] = new Level(game, i);
         }
 
-        currentLevel = levels[floorLevel];
+        currentLevel = levels[level];
 
         // initialize the buttons
         double bHeight = game.scaledY(160);
@@ -90,6 +92,15 @@ public class MainLoop {
             paint.setTextSize(40);
 
             canvas.drawText("Up", 20, 100, paint);
+        }
+
+        Paint paint = new Paint();
+        paint.setColor(ContextCompat.getColor(game.getContext(), R.color.purple_200));
+        paint.setStrokeWidth(2);
+        paint.setStyle(Paint.Style.STROKE);
+        // draw tiles (DEBUG)
+        for (Rect tile : currentLevel.tiles) {
+            canvas.drawRect((float) tile.left, (float) tile.top, (float) tile.right, (float) tile.bot, paint);
         }
     }
 }
