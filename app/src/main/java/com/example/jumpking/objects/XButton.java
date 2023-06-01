@@ -23,7 +23,6 @@ public class XButton {
         this.game = game;
         pressedDown = false;
         paint = new Paint();
-        paint.setAlpha(200);
         pointerID = -1;
 
         bitmap = BitmapFactory.decodeResource(game.getResources(), imgResID);

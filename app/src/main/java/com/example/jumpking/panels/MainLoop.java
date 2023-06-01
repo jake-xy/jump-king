@@ -17,13 +17,14 @@ import com.example.jumpking.objects.Rect;
 import com.example.jumpking.objects.XButton;
 
 public class MainLoop {
-
     Game game;
     public boolean active = false;
     Jumper king;
     int level = 0;
-    Level currentLevel;
+    public Level currentLevel;
     Level[] levels = new Level[164];
+
+    private boolean showTiles = false;
 
 //    public XButton[] dPads = new XButton[3];
     public XButton lButton, rButton, uButton;
@@ -34,8 +35,10 @@ public class MainLoop {
         for (int i = 0; i < 12; i++) {
             levels[i] = new Level(game, i);
         }
-
         currentLevel = levels[level];
+
+        // initialize the king
+        king = new Jumper(game);
 
         // initialize the buttons
         double bHeight = game.scaledY(160);
@@ -47,6 +50,43 @@ public class MainLoop {
 
     public void update() {
 
+        if (uButton.pressedDown) {
+            king.startCharge();
+        }
+        else {
+            king.stopCharge();
+        }
+
+        if (lButton.pressedDown) {
+            king.stopMoving();
+            king.moveLeft();
+        }
+        else if (rButton.pressedDown) {
+            king.stopMoving();
+            king.moveRight();
+        }
+        else {
+            king.stopMoving();
+        }
+
+        king.update(currentLevel.tiles);
+
+        if (king.rect.top <= 0) {
+            king.rect.setY(game.playAreaSize[1] - king.rect.y);
+            setLevel(level + 1);
+        }
+
+        else if (king.rect.top > game.playAreaSize[1]) {
+            king.rect.setY(0);
+            setLevel(level - 1);
+        }
+
+    }
+
+
+    public void setLevel(int level) {
+        this.level = level;
+        currentLevel = levels[level];
     }
 
 
@@ -59,7 +99,7 @@ public class MainLoop {
         // draw midground
         currentLevel.drawMidground(canvas);
             // player
-//        king.draw(canvas);
+        king.draw(canvas);
 
         // draw foreground
         currentLevel.drawForeground(canvas);
@@ -94,13 +134,16 @@ public class MainLoop {
             canvas.drawText("Up", 20, 100, paint);
         }
 
-        Paint paint = new Paint();
-        paint.setColor(ContextCompat.getColor(game.getContext(), R.color.purple_200));
-        paint.setStrokeWidth(2);
-        paint.setStyle(Paint.Style.STROKE);
-        // draw tiles (DEBUG)
-        for (Rect tile : currentLevel.tiles) {
-            canvas.drawRect((float) tile.left, (float) tile.top, (float) tile.right, (float) tile.bot, paint);
+        // tile hotboxes
+        if (showTiles) {
+            Paint paint = new Paint();
+            paint.setColor(ContextCompat.getColor(game.getContext(), R.color.purple_200));
+            paint.setStrokeWidth(2);
+            paint.setStyle(Paint.Style.STROKE);
+            // draw tiles (DEBUG)
+            for (Rect tile : currentLevel.tiles) {
+                canvas.drawRect((float) tile.left, (float) tile.top, (float) tile.right, (float) tile.bot, paint);
+            }
         }
     }
 }

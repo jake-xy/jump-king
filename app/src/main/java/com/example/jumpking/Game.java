@@ -16,10 +16,12 @@ import com.example.jumpking.panels.*;
 
 public class Game extends SurfaceView implements SurfaceHolder.Callback {
 
+    public double[] playAreaSize = new double[2];
+
     GameLoop gameLoop;
     // panels
 
-    MainLoop mainLoop;
+    public MainLoop mainLoop;
     Menu menu;
     Pause pause;
     LevelCreator levelCreator;
@@ -45,9 +47,9 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
         mainLoop = new MainLoop(this);
         menu = new Menu(this);
         pause = new Pause(this);
-        levelCreator = new LevelCreator(this, 0);
 
-//        System.out.println("Screen w: " + getWidth() + ", h: " + getHeight());
+        System.out.println("Screen w: " + getWidth() + ", h: " + getHeight());
+
         mainLoop.active = true;
         prevTime = System.currentTimeMillis();
         gameLoop.startLoop();
@@ -70,7 +72,6 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
             case MotionEvent.ACTION_DOWN:
             case MotionEvent.ACTION_POINTER_DOWN:
                 int acID = event.getActionIndex();
-//                drawText("touch idx: " + event.getActionIndex(), 20, 120);
                 if (mainLoop.active) {
                     if (mainLoop.lButton.press((int) event.getX(acID), (int) event.getY(acID))) {
                         mainLoop.lButton.pointerID = event.getPointerId(acID);
@@ -87,15 +88,12 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
             case MotionEvent.ACTION_POINTER_UP:
                 if (mainLoop.active) {
                     if (mainLoop.lButton.pointerID == event.getPointerId(event.getActionIndex())) {
-//                        drawText("released pointer id: " + mainLoop.lButton.pointerID, 20, 120);
                         mainLoop.lButton.release();
                     }
                     if (mainLoop.rButton.pointerID == event.getPointerId(event.getActionIndex())) {
-//                        drawText("released pointer id: " + mainLoop.rButton.pointerID, 20, 120);
                         mainLoop.rButton.release();
                     }
                     if (mainLoop.uButton.pointerID == event.getPointerId(event.getActionIndex())) {
-//                        drawText("released pointer id: " + mainLoop.uButton.pointerID, 20, 120);
                         mainLoop.uButton.release();
                     }
                 }
@@ -128,6 +126,9 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
             mainLoop.draw(canvas);
         }
 
+        // FPS
+        drawFps(canvas);
+
     }
 
     public double scaledX(double x) {
@@ -136,6 +137,16 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
 
     public double scaledY(double y) {
         return getHeight() * (y/1017); //1017 is h of the screen I worked with
+    }
+
+    public void drawFps(Canvas canvas) {
+        Paint paint = new Paint();
+
+        paint.setColor(ContextCompat.getColor(getContext(), R.color.purple_200));
+        paint.setTextSize(40);
+
+        canvas.drawText("UPS: " + (int)gameLoop.getAverageUPS(), 90, 100, paint);
+        canvas.drawText("FPS: " + (int)gameLoop.getAverageFPS(), 90, 160, paint);
     }
 
 

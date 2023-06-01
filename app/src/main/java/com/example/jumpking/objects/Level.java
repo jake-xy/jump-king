@@ -58,6 +58,10 @@ public class Level {
         if (fgBitmap != null)
             fgBitmap = Bitmap.createScaledBitmap(fgBitmap, (int) width, (int) height, true);
 
+        // save the size inside game class
+        game.playAreaSize[0] = mgBitmap.getWidth();
+        game.playAreaSize[1] = mgBitmap.getHeight();
+
         this.left = game.getWidth()/2 - mgBitmap.getWidth()/2;
         this.top = 0;
 
