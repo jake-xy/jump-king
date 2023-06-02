@@ -58,11 +58,11 @@ public class MainLoop {
         }
 
         if (lButton.pressedDown) {
-            king.stopMoving();
+//            king.stopMoving();
             king.moveLeft();
         }
         else if (rButton.pressedDown) {
-            king.stopMoving();
+//            king.stopMoving();
             king.moveRight();
         }
         else {
@@ -71,12 +71,12 @@ public class MainLoop {
 
         king.update(currentLevel.tiles);
 
-        if (king.rect.top <= 0) {
-            king.rect.setY(game.playAreaSize[1] - king.rect.y);
+        if (king.rect.bot <= 0) {
+            king.rect.setY(game.playAreaRect.bot - king.rect.h);
             setLevel(level + 1);
         }
 
-        else if (king.rect.top > game.playAreaSize[1]) {
+        else if (king.rect.top > game.playAreaRect.bot) {
             king.rect.setY(0);
             setLevel(level - 1);
         }

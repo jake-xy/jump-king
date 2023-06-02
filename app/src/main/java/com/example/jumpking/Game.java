@@ -11,12 +11,13 @@ import android.view.SurfaceView;
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
+import com.example.jumpking.objects.Rect;
 import com.example.jumpking.objects.XButton;
 import com.example.jumpking.panels.*;
 
 public class Game extends SurfaceView implements SurfaceHolder.Callback {
 
-    public double[] playAreaSize = new double[2];
+    public Rect playAreaRect;
 
     GameLoop gameLoop;
     // panels

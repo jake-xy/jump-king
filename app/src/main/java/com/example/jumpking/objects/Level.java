@@ -33,7 +33,6 @@ public class Level {
         }
 
         generateLevel();
-        generateCollideTiles();
     }
 
     private void generateLevel() {
@@ -58,14 +57,14 @@ public class Level {
         if (fgBitmap != null)
             fgBitmap = Bitmap.createScaledBitmap(fgBitmap, (int) width, (int) height, true);
 
-        // save the size inside game class
-        game.playAreaSize[0] = mgBitmap.getWidth();
-        game.playAreaSize[1] = mgBitmap.getHeight();
 
         this.left = game.getWidth()/2 - mgBitmap.getWidth()/2;
         this.top = 0;
 
-        tileW = mgBitmap.getWidth()/60; // 60 x 45 is tile size of each level
+        // save the size inside game class
+        game.playAreaRect = new Rect(left, top, mgBitmap.getWidth(), mgBitmap.getHeight());
+
+        tileW = mgBitmap.getWidth()/60; // 60 x 45 is how many tiles in a play area
         tileH = mgBitmap.getHeight()/45;
 
         generateCollideTiles();

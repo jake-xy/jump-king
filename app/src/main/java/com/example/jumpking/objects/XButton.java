@@ -14,7 +14,6 @@ public class XButton {
     public Rect rect;
     Game game;
     Bitmap bitmap;
-    Paint paint;
 
     public boolean pressedDown;
     public int pointerID;
@@ -22,7 +21,6 @@ public class XButton {
     public XButton(Game game, int imgResID, double height) {
         this.game = game;
         pressedDown = false;
-        paint = new Paint();
         pointerID = -1;
 
         bitmap = BitmapFactory.decodeResource(game.getResources(), imgResID);
@@ -100,7 +98,7 @@ public class XButton {
 
     public void draw(Canvas canvas) {
 
-        canvas.drawBitmap(bitmap, (float) rect.left, (float) rect.top, paint);
+        canvas.drawBitmap(bitmap, (float) rect.left, (float) rect.top, null);
 
     }
 
