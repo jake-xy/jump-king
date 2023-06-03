@@ -16,9 +16,9 @@ public class Level {
     public Bitmap levelBitmap;
     public int level;
     private int floorLevel;
-    public int tileW, tileH;
+    public static int tileW, tileH;
     public double left, top;
-    public Rect[] tiles = new Rect[0];
+    public Tile[] tiles = new Tile[0];
 
 
     public Level(Game game, int level) {
@@ -73,7 +73,7 @@ public class Level {
 
 
     public void generateCollideTiles() {
-        tiles = new Rect[0];
+        tiles = new Tile[0];
         int levelW = 60; // pixel size of levels.png (where the rects are located)
         int levelH = 45;
         int x = (int)(floorLevel/13);
@@ -90,7 +90,10 @@ public class Level {
                 int alpha = Color.alpha(colour);
 
                 if (red == 0 && green == 0 && blue == 0) {
-                    tiles = append(new Rect(left + px*tileW,top + py*tileH, tileW, tileH), tiles);
+                    tiles = append(new Tile(left + px*tileW,top + py*tileH, tileW, tileH, Tile.RECT), tiles);
+                }
+                if (red == 255 && green == 0 && blue == 0) {
+                    tiles = append(new Tile(left + px*tileW,top + py*tileH, tileW, tileH, Tile.SLOPE), tiles);
                 }
             }
         }
@@ -121,8 +124,19 @@ public class Level {
         }
     }
 
-    private Rect[] append(Rect item, Rect[] array) {
+    public Rect[] append(Rect item, Rect[] array) {
         Rect[] out = new Rect[array.length + 1];
+
+        for (int i = 0; i < array.length; i++) {
+            out[i] = array[i];
+        }
+        out[array.length] = item;
+
+        return out;
+    }
+
+    public static Tile[] append(Tile item, Tile[] array) {
+        Tile[] out = new Tile[array.length + 1];
 
         for (int i = 0; i < array.length; i++) {
             out[i] = array[i];

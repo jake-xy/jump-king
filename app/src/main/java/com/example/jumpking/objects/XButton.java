@@ -13,7 +13,7 @@ public class XButton {
 
     public Rect rect;
     Game game;
-    Bitmap bitmap;
+    Bitmap bitmap, ogBitmap;
 
     public boolean pressedDown;
     public int pointerID;
@@ -29,6 +29,7 @@ public class XButton {
 
         // resize
         bitmap = Bitmap.createScaledBitmap(bitmap, (int) width, (int) height, true);
+        ogBitmap = bitmap;
 
         rect = new Rect(0, 0, width, height);
     }
@@ -68,34 +69,6 @@ public class XButton {
 
     }
 
-
-    public boolean listenForEvent(MotionEvent event) {
-        // do the thing with multiple touches from youtube guy
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_POINTER_DOWN:
-                Log.d("XButton.java", "POINTER DOWN EVENT");
-                if (rect.collides((int) event.getX(), (int) event.getY())) {
-                    if (!pressedDown) {
-                        pointerID = event.getPointerId(event.getActionIndex());
-                        pressedDown = true;
-                    }
-                }
-                return false;
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_POINTER_UP:
-            case MotionEvent.ACTION_BUTTON_RELEASE:
-                Log.d("XButton.java", "POINTER UP EVENT");
-                if (event.getPointerId(event.getActionIndex()) == pointerID && pressedDown) {
-                    pressedDown = false;
-                }
-                return true;
-        }
-
-        return false;
-    }
-
-
     public void draw(Canvas canvas) {
 
         canvas.drawBitmap(bitmap, (float) rect.left, (float) rect.top, null);
@@ -124,7 +97,7 @@ public class XButton {
         rect.setHeight(height);
         rect.setWidth(width);
 
-        bitmap = Bitmap.createScaledBitmap(bitmap, (int) width, (int) height, true);
+        bitmap = Bitmap.createScaledBitmap(ogBitmap, (int) width, (int) height, true);
     }
 
     public double getWidth() {
