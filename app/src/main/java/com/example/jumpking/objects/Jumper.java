@@ -5,6 +5,8 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.media.MediaPlayer;
+import android.provider.MediaStore;
 
 import androidx.core.content.ContextCompat;
 
@@ -20,8 +22,8 @@ public class Jumper {
     Paint paint;
 
     // physics variables
-    double xVel, yVel, chargeStartTime;
-    boolean charging, jumping, onGround, moving, slopingDown;
+    double xVel, yVel, chargeStartTime, maxChargeTime = 600;
+    boolean charging, onGround, moving, sloping;
     final double JUMP_VEL = 50, MAX_YVEL = JUMP_VEL*1.10;
     double MOVE_VEL, JUMP_X_VEL;
     int slopeXdir;
@@ -34,8 +36,12 @@ public class Jumper {
     double ogH, walkTick, peakY;
     Bitmap[] walkBitmaps = new Bitmap[4];
     Bitmap[] jumpBitmaps = new Bitmap[4];
-    protected final boolean showHitbox = false;
-    boolean plakda, falling;
+    Bitmap bumpBitmap;
+    public boolean showHitbox = false;
+    boolean plakda, falling, bumped;
+
+    // sfx variables
+    MediaPlayer jumpSFX, bumpSFX, landSFX, splatSFX;
 
 
     public Jumper(Game game) {
@@ -49,17 +55,26 @@ public class Jumper {
         // for the physics
         onGround = true;
         charging = false;
-        jumping = false;
         moving = false;
-        slopingDown = false;
+        sloping = false;
         MOVE_VEL = game.playAreaRect.w * 0.00625;
         JUMP_X_VEL = game.playAreaRect.w * 0.0139;
+        xVel = 0;
+        yVel = 0;
 
         // for the animation
         initializeSprites();
         facingDirection = RIGHT;
         plakda = false;
         falling = false;
+        bumped = false;
+
+        // for the sound
+        bumpSFX = MediaPlayer.create(game.getContext(), R.raw.king_bump);
+        jumpSFX = MediaPlayer.create(game.getContext(), R.raw.king_jump);
+        landSFX = MediaPlayer.create(game.getContext(), R.raw.king_land);
+        splatSFX = MediaPlayer.create(game.getContext(), R.raw.king_splat);
+
 
         // for the hitbox
         paint = new Paint();
@@ -113,6 +128,11 @@ public class Jumper {
         for (int i = 0; i < 4; i++) {
             jumpBitmaps[i] = Bitmap.createBitmap(jumpSprite, (int)(i*singleW), 0,(int) singleW,(int) height);
         }
+
+        // for the bump
+        bumpBitmap = BitmapFactory.decodeResource(game.getResources(), R.drawable.king_bumps);
+        width = bumpBitmap.getWidth()*rect.h / bumpBitmap.getHeight();
+        bumpBitmap = Bitmap.createScaledBitmap(bumpBitmap, (int) width, (int) height, true);
     }
 
 
@@ -126,9 +146,9 @@ public class Jumper {
     }
 
     public void moveLeft() {
-        if (!moving && onGround && !slopingDown) {
+        if (!moving && onGround && !sloping) {
             // physics
-            xVel = -MOVE_VEL;
+            xVel = MOVE_VEL*-1;
             moving = true;
 
             // animation
@@ -142,7 +162,7 @@ public class Jumper {
 
 
     public void moveRight() {
-        if (!moving && onGround && !slopingDown) {
+        if (!moving && onGround && !sloping) {
             // physics
             xVel = MOVE_VEL;
             moving = true;
@@ -191,49 +211,39 @@ public class Jumper {
 
     public void jump() {
         if (onGround) {
-
+            // physics
             double chargeTimeInMillis = System.currentTimeMillis() - chargeStartTime;
 
-            if (chargeTimeInMillis > 600) {
-                chargeTimeInMillis = 600;
+            if (chargeTimeInMillis > maxChargeTime) {
+                chargeTimeInMillis = maxChargeTime;
             }
 
-            yVel = game.scaledY(-JUMP_VEL * chargeTimeInMillis/600);
+            yVel = game.scaledY(-JUMP_VEL * chargeTimeInMillis/maxChargeTime);
 
-            jumping = true;
+            // sfx
+            jumpSFX.start();
+
+            // update flags
             onGround = false;
         }
     }
 
 
-    public void update(Tile[] tiles) {
+    public void update(Level level) {
 
         if (charging) {
-            if (System.currentTimeMillis() - chargeStartTime >= 600) {
+            if (System.currentTimeMillis() - chargeStartTime >= maxChargeTime) {
                 stopCharge();
             }
         }
 
         if (!charging) {
-            if (moving && !slopingDown) {
-                // physics
-                move(xVel *game.dt,  0, tiles);
-
-                // animation
-                if ((int)walkTick < 15 -1) {
-                    walkTick += 1 *game.dt;
-                }
-                else {
-                    walkTick = 0;
-                }
-            }
-
             // check if still on ground
-            if (onGround && !plakda && !slopingDown) {
+            if (onGround && !plakda && !sloping) {
                 // check if there is a tile below the dude
                 Tile[] collidedTiles = new Tile[0];
                 onGround = false;
-                for (Tile tile : tiles) {
+                for (Tile tile : level.tiles) {
                     Rect collisionRect = new Rect(rect.x, rect.y+1, rect.w, rect.h);
                     // save those tiles
                     if (collisionRect.collides(tile)) {
@@ -252,22 +262,43 @@ public class Jumper {
 
             }
 
-            if (slopingDown) {
-                move(yVel*slopeXdir *game.dt, yVel *game.dt, tiles);
+            // movement when sloping
+            if (sloping) {
+                move(xVel *game.dt, yVel *game.dt, level);
+
+                // gravity
+                if (!onGround) {
+                    // 125% of JUMP_VEL is the max yVel
+                    if (yVel < game.scaledY(MAX_YVEL)) {
+                        yVel += game.scaledY(1.5) *game.dt;
+                        xVel += game.scaledY(1.5)*slopeXdir *game.dt;
+                    }
+                }
+
             }
             else {
-//                System.out.println("yvel before: " + yVel);
-                move(0, yVel *game.dt, tiles);
-//                System.out.println("yvel after: " + yVel);
-            }
 
-            // gravity
-            if (!onGround) {
-                // 125% of JUMP_VEL is the max yVel
-                if (yVel < game.scaledY(MAX_YVEL)) {
-                    yVel += game.scaledY(3) *game.dt;
+                move(xVel *game.dt, yVel *game.dt, level);
+
+                if (moving) {
+                    // animation
+                    if ((int)walkTick < 15 -1) {
+                        walkTick += 1 *game.dt;
+                    }
+                    else {
+                        walkTick = 0;
+                    }
+                }
+
+                // gravity
+                if (!onGround) {
+                    // 125% of JUMP_VEL is the max yVel
+                    if (yVel < game.scaledY(MAX_YVEL)) {
+                        yVel += game.scaledY(3) *game.dt;
+                    }
                 }
             }
+
 
             // animation
             if (yVel > 0 && !falling) {
@@ -278,79 +309,158 @@ public class Jumper {
     }
 
 
-    public void move(double xVel, double yVel, Tile[] tiles) {
-        // move rect in x direction
+    public void move(double xVel, double yVel, Level level) {
+        if (xVel == 0 && yVel == 0) return;
+
+        // move x first
+        moveX(xVel, level);
+
+        // move y
+        moveY(yVel, level);
+
+        // condition to stop sloping
+        if (sloping) {
+            boolean collided = false;
+            for (Tile tile : level.tiles) {
+                if (rect.collides(tile)) {
+                    System.out.println("colliding");
+                    collided = true;
+                }
+            }
+
+            // king's not sloping anymore when he's not in a slope tile
+            if (!collided) {
+                sloping = false;
+            }
+
+        }
+
+    }
+
+
+    public void moveX(double xVel, Level level) {
+        // move x first
         rect.moveX(xVel);
 
-        // handle collision
-        for (Tile tile : tiles) {
-            if (rect.collides(tile)) {
-                // right collision (i.e., this.right collides with tile.left)
-                if (xVel > 0 && !slopingDown) {
-                    // rect collision
-                    if (tile.type == Tile.RECT) {
-                        rect.setX(tile.left - rect.w);
-                        if (jumping) {
-                            this.xVel /= -2;
+        // then handle collision only when not sloping and when moving
+        if (!sloping && yVel != 0) {
+            // handle slope collision first
+            for (Tile slopeTile : level.slopeTiles) {
+                if (rect.collides(slopeTile)) {
+                    int[] airDir = slopeTile.getAirDir(level.rectTiles);
+
+                    if (airDir[0] == 1) {
+                        // left collision
+                        if (xVel < 0 && rect.left < slopeTile.centerX) {
+                            // adjust x
+                            rect.setX(slopeTile.centerX);
+                        }
+                        // right collision
+                        else if (xVel > 0) {
+                            rect.setX(slopeTile.left - rect.w);
                         }
                     }
-                    // right slope collision
-                    else {
-                        if (!slopingDown) {
-                            rect.setX(tile.left - rect.w);
+                    else if (airDir[0] == -1) {
+                        // right collision
+                        if (xVel > 0 && rect.right > slopeTile.centerX) {
+                            // adjust x
+                            rect.setX(slopeTile.centerX - rect.w);
                         }
-                    }
-                }
-                // left collision
-                else if (xVel < 0 && !slopingDown) {
-                    // rect collision
-                    if (tile.type == Tile.RECT) {
-                        rect.setX(tile.right);
-                        if (jumping) {
-                            this.xVel /= -2;
-                        }
-
-//                        // condition to stop sloping down (when the dude bumps into a wall
-//                        if (slopingDown) {
-//                            slopingDown = false;
-//                        }
-
-
-                    }
-                    // left slope collision
-                    else {
-                        if (!slopingDown) {
-                            rect.setX(tile.right);
+                        // left collision
+                        else if (xVel < 0) {
+                            rect.setX(slopeTile.right);
                         }
                     }
                 }
             }
         }
 
-        // move rect in y direction
+        if (!sloping && xVel != 0) {
+            // handle rect collision
+            for (Tile rectTile : level.rectTiles) {
+                if (rect.collides(rectTile) && rectTile.rectType == Tile.RECT_SOLID) {
+                    // right collision
+                    if (xVel > 0) {
+                        //adjust x
+                        rect.setX(rectTile.left - rect.w);
+                    }
+                    // left collision
+                    else {
+                        // adjust x
+                        rect.setX(rectTile.right);
+                    }
+
+                    // bump
+                    if (!onGround) {
+                        this.xVel /= -2;
+                        bumpSFX.start();
+                    }
+                }
+            }
+        }
+
+    }
+
+
+    public void moveY(double yVel, Level level) {
+        // move y first
         rect.moveY(yVel);
 
-        Tile[] collidedTiles = new Tile[0]; // used for slope collision
+        // only handle collision when not sloping and when moving
+        if (!sloping && yVel != 0) {
+            // handle slope collision
+            for (Tile slopeTile : level.slopeTiles) {
+                if (rect.collides(slopeTile)) {
+                    int[] airDir = slopeTile.getAirDir(level.rectTiles);
 
-        // handle collision
-        for (Tile tile : tiles) {
-            if (rect.collides(tile)) {
-                collidedTiles = game.mainLoop.currentLevel.append(tile, collidedTiles);
-                // bot collision (i.e., this.bot collides with tile.top)
-                if (yVel > 0 && !slopingDown) {
-                    // rect collision
-                    if (tile.type == Tile.RECT) {
-                        // physics
-                        rect.setY(tile.top - rect.h);
-                        this.yVel = 0;
+                    // bot collision
+                    if (airDir[1] == -1 && yVel > 0) {
+                        if (rect.bot > slopeTile.centerY) { // dude is sloping
+                            // adjust y
+                            rect.setY(slopeTile.centerY - rect.h);
 
-                        // if airborne and it touches the ground, it's not moving already
-                        if (!onGround) {
+                            // initialize sloping
+                            this.slopeXdir = airDir[0];
+                            // when sloping down, the yVel is only 25% of the current yVel
+                            this.yVel = this.yVel * 0.25;
+                            this.xVel = this.yVel * slopeXdir;
+
                             moving = false;
-                            walkTick = 0;
+                            onGround = false;
+                            sloping = true;
                         }
+                    }
+                    // top collision
+                    else if (airDir[1] == 1 && yVel < 0) {
+                        if (rect.top < slopeTile.centerY) {
+                            // adjust y
+                            rect.setY(slopeTile.centerY);
 
-                        // animation
+                            // initialize sloping
+                            this.slopeXdir = airDir[0];
+                            this.xVel = this.yVel * slopeXdir;
+
+                            moving = false;
+                            onGround = false;
+                            sloping = true;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (!sloping && yVel != 0) {
+            // handle rect collision
+            for (Tile rectTile : level.rectTiles) {
+                if (rect.collides(rectTile) && rectTile.rectType == Tile.RECT_SOLID) {
+                    // bot collision
+                    if (yVel > 0) {
+                        // adjust y
+                        rect.setY(rectTile.top - rect.h);
+
+                        landSFX.start();
+
+                        // splat animation
                         if (!onGround) {
                             double distanceFell = (rect.y - game.mainLoop.level*game.playAreaRect.h) - peakY;
 
@@ -358,104 +468,41 @@ public class Jumper {
                                 game.mainLoop.lButton.release();
                                 game.mainLoop.rButton.release();
                                 plakda = true;
+
+                                // sfx
+                                splatSFX.start();
                             }
                         }
 
-                        // reset the physics variables
-                        slopingDown = false;
-                        falling = false;
-                        jumping = false;
+                        // reset physics variables
+                        sloping = false;
+                        bumped = false;
                         onGround = true;
+                        this.xVel = 0;
+                        this.yVel = 0;
+                        moving = false;
+                        // reset animation variables
+                        walkTick = 0;
+                        falling = false;
                     }
-                    // bot slope collision
+                    // top collision
                     else {
-                        if (!slopingDown) {
-                            rect.setY(tile.top - rect.h);
-                        }
-                    }
-                }
-                // top collision
-                else if (yVel < 0 && !slopingDown) {
-                    // rect collision
-                    if (tile.type == Tile.RECT) {
-                        rect.setY(tile.bot);
+                        // adjust y
+                        rect.setY(rectTile.bot);
+
                         this.xVel /= 2;
                         this.yVel = 0;
-                        jumping = false;
+                        bumpSFX.start();
                     }
-                    // top slope collision
-                    else {
-//                        if (!slopingDown) {
-//                            rect.setY(tile.bot);
-//                        }
-                    }
+
                 }
             }
         }
-
-        // slope collision
-        boolean hasRect = false;
-        Tile collidedSlope = null;
-        for (Tile tile : collidedTiles) {
-            if (tile.type == Tile.RECT) {
-                hasRect = true;
-                break;
-            }
-            else {
-                collidedSlope = tile;
-            }
-        }
-
-        if (collidedTiles.length > 0 && !slopingDown) {
-            // if no collision with a tile rect is present, it means collided tile is slope
-            if (!hasRect && collidedSlope != null && yVel > 0) {
-
-                // determine the x dir of the slope
-                this.slopeXdir = collidedSlope.getSlopeXdir(tiles);
-
-                // adjust the position to make the sloping smoother
-                if (slopeXdir == 1) {
-                    rect.setX(collidedSlope.left);
-                }
-                else {
-                    rect.setX(collidedSlope.right - this.rect.w);
-                }
-                rect.setY(collidedSlope.top - rect.h);
-
-                // when sloping down, the yVel is only 15% of the JUMPVEL
-                this.yVel = JUMP_VEL * 0.15;
-
-                moving = false;
-                onGround = false;
-                slopingDown = true;
-            }
-        }
-
-        // condition to stop slopingdown
-        // if the dude is airborne already or it only collides with a rect
-        if ( (slopingDown && collidedTiles.length <= 0) || (slopingDown && hasRect && collidedSlope == null) ) {
-
-            if (slopeXdir == 1) {
-                // move right
-                this.xVel = this.yVel/2;
-                moving = true;
-            }
-            else {
-                // move left
-                this.xVel = -this.yVel/2;
-                moving = true;
-            }
-
-            slopingDown = false;
-        }
-
     }
-
 
 
     public void draw(Canvas canvas) {
         Bitmap finalDisplay;
-        int idx = (int)( (int)walkTick / (15.0/3.0) ) + 1;
 
         if (charging) {
             finalDisplay = jumpBitmaps[0];
@@ -465,12 +512,22 @@ public class Jumper {
         }
         else if (onGround) {
             if (moving) {
+                int idx = (int)( (int)walkTick / (15.0/3.0) ) + 1;
                 // arrayIndexOutOfBounds error keeps on happening
-                finalDisplay = walkBitmaps[idx];
+                try {
+                    finalDisplay = walkBitmaps[idx];
+                }
+                catch (ArrayIndexOutOfBoundsException e) {
+                    idx -= 1;
+                    finalDisplay = walkBitmaps[idx];
+                }
             }
             else {
                 finalDisplay = walkBitmaps[0];
             }
+        }
+        else if (bumped) {
+            finalDisplay = bumpBitmap;
         }
         else {
             if (yVel < 0) {
@@ -481,15 +538,14 @@ public class Jumper {
             }
         }
 
-
         // flipp based on the direction
         finalDisplay = facingDirection == RIGHT ? finalDisplay : getFlippedBitmap(finalDisplay, true, false);
 
         canvas.drawBitmap(
-            finalDisplay,
+                finalDisplay,
                 (float) (rect.centerX - finalDisplay.getWidth()/2),
                 (float) rect.top,
-            null
+                null
         );
 
         if (showHitbox) {

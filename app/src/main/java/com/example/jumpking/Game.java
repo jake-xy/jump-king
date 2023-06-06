@@ -17,17 +17,17 @@ import com.example.jumpking.panels.*;
 
 public class Game extends SurfaceView implements SurfaceHolder.Callback {
 
+    public int GAME_SPEED = 30; // it's like working on 30 FPS
     public Rect playAreaRect;
 
     GameLoop gameLoop;
     // panels
 
     public MainLoop mainLoop;
-    Menu menu;
-    Pause pause;
-    LevelCreator levelCreator;
+    public Menu menuPanel;
+    public Pause pausePanel;
 
-    double prevTime;
+    public double prevTime;
     public double dt;
 
     public Game(Context context) {
@@ -46,12 +46,13 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     public void surfaceCreated(@NonNull SurfaceHolder surfaceHolder) {
         mainLoop = new MainLoop(this);
-        menu = new Menu(this);
-        pause = new Pause(this);
+        menuPanel = new Menu(this);
+        pausePanel = new Pause(this);
 
-        System.out.println("Screen w: " + getWidth() + ", h: " + getHeight());
+//        System.out.println("Screen w: " + getWidth() + ", h: " + getHeight());
 
         mainLoop.active = true;
+        mainLoop.visible = true;
         prevTime = System.currentTimeMillis();
         gameLoop.startLoop();
     }
@@ -69,37 +70,10 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
     @Override
     public boolean onTouchEvent(MotionEvent event) {
 
-        switch (event.getActionMasked()) {
-            case MotionEvent.ACTION_DOWN:
-            case MotionEvent.ACTION_POINTER_DOWN:
-                int acID = event.getActionIndex();
-                if (mainLoop.active) {
-                    if (mainLoop.lButton.press((int) event.getX(acID), (int) event.getY(acID))) {
-                        mainLoop.lButton.pointerID = event.getPointerId(acID);
-                    }
-                    if (mainLoop.rButton.press((int) event.getX(acID), (int) event.getY(acID))) {
-                        mainLoop.rButton.pointerID = event.getPointerId(acID);
-                    }
-                    if (mainLoop.uButton.press((int) event.getX(acID), (int) event.getY(acID))) {
-                        mainLoop.uButton.pointerID = event.getPointerId(acID);
-                    }
-                }
-                return true;
-            case MotionEvent.ACTION_UP:
-            case MotionEvent.ACTION_POINTER_UP:
-                if (mainLoop.active) {
-                    if (mainLoop.lButton.pointerID == event.getPointerId(event.getActionIndex())) {
-                        mainLoop.lButton.release();
-                    }
-                    if (mainLoop.rButton.pointerID == event.getPointerId(event.getActionIndex())) {
-                        mainLoop.rButton.release();
-                    }
-                    if (mainLoop.uButton.pointerID == event.getPointerId(event.getActionIndex())) {
-                        mainLoop.uButton.release();
-                    }
-                }
-                return true;
-        }
+        // these methods return true if the event is handled
+        if (mainLoop.onTouch(event)) return true;
+
+        if (pausePanel.onTouch(event)) return true;
 
         return super.onTouchEvent(event);
     }
@@ -108,14 +82,12 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
 
         // get the delta time (dt)
         dt = (System.currentTimeMillis() - prevTime) / 1000;
-        dt *= 30; // working in 30 FPS
+        dt *= GAME_SPEED; // working in 30 FPS
         prevTime = System.currentTimeMillis();
 
-        // update activated panels' game state
-        if (mainLoop.active) {
-            mainLoop.update();
-        }
-
+        // update panels' game state
+        mainLoop.update();
+        pausePanel.update();
     }
 
     @Override
@@ -123,9 +95,8 @@ public class Game extends SurfaceView implements SurfaceHolder.Callback {
         super.draw(canvas);
 
         // main loop
-        if (mainLoop.active) {
-            mainLoop.draw(canvas);
-        }
+        mainLoop.draw(canvas);
+        pausePanel.draw(canvas);
 
         // FPS
         drawFps(canvas);

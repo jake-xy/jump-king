@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Paint;
 
 import com.example.jumpking.Game;
 import com.example.jumpking.R;
@@ -19,6 +20,8 @@ public class Level {
     public static int tileW, tileH;
     public double left, top;
     public Tile[] tiles = new Tile[0];
+    public Tile[] rectTiles = new Tile[0];
+    public Tile[] slopeTiles = new Tile[0];
 
 
     public Level(Game game, int level) {
@@ -38,6 +41,8 @@ public class Level {
     private void generateLevel() {
         floorLevel = level+1;
 
+        System.out.println("floor: " + floorLevel);
+
         // Generating the bitmaps for the current level
         int id = game.getResources().getIdentifier("mg" + (floorLevel), "drawable", game.getContext().getPackageName());
         mgBitmap = BitmapFactory.decodeResource(game.getResources(), id);
@@ -50,12 +55,15 @@ public class Level {
         double width = mgBitmap.getWidth()*height / mgBitmap.getHeight();
 
         // resize
-        if (bgBitmap != null)
+        if (bgBitmap != null) {
             bgBitmap = Bitmap.createScaledBitmap(bgBitmap, (int) width, (int) height, true);
-        if (mgBitmap != null)
+        }
+        if (mgBitmap != null) {
             mgBitmap = Bitmap.createScaledBitmap(mgBitmap, (int) width, (int) height, true);
-        if (fgBitmap != null)
+        }
+        if (fgBitmap != null) {
             fgBitmap = Bitmap.createScaledBitmap(fgBitmap, (int) width, (int) height, true);
+        }
 
 
         this.left = game.getWidth()/2 - mgBitmap.getWidth()/2;
@@ -68,6 +76,8 @@ public class Level {
         tileH = mgBitmap.getHeight()/45;
 
         generateCollideTiles();
+        // debug
+        System.out.println("tiles len: " + tiles.length);
     }
 
 
@@ -76,8 +86,12 @@ public class Level {
         tiles = new Tile[0];
         int levelW = 60; // pixel size of levels.png (where the rects are located)
         int levelH = 45;
-        int x = (int)(floorLevel/13);
-        int y = (floorLevel - 13*(int)(floorLevel/13) - 1);
+        int x = (int)(level/13);
+        int y = (level - 13*(int)(level/13));
+
+        // debug
+        System.out.println("level: " + level);
+        System.out.println("x: " + x + " y: " + y);
 
         levelBitmap = Bitmap.createBitmap(levelsBitmap, x * levelW, y * levelH, levelW, levelH);
 
@@ -87,14 +101,27 @@ public class Level {
                 int red = Color.red(colour);
                 int green = Color.green(colour);
                 int blue = Color.blue(colour);
-                int alpha = Color.alpha(colour);
 
+                // black (rects)
                 if (red == 0 && green == 0 && blue == 0) {
                     tiles = append(new Tile(left + px*tileW,top + py*tileH, tileW, tileH, Tile.RECT), tiles);
+                    tiles[tiles.length - 1].rectType = Tile.RECT_SOLID;
+                    rectTiles = append(new Tile(left + px*tileW,top + py*tileH, tileW, tileH, Tile.RECT), rectTiles);
+                    rectTiles[rectTiles.length - 1].rectType = Tile.RECT_SOLID;
                 }
-                if (red == 255 && green == 0 && blue == 0) {
+                // red (slopes)
+                else if (red == 255 && green == 0 && blue == 0) {
                     tiles = append(new Tile(left + px*tileW,top + py*tileH, tileW, tileH, Tile.SLOPE), tiles);
+                    slopeTiles = append(new Tile(left + px*tileW,top + py*tileH, tileW, tileH, Tile.SLOPE), slopeTiles);
                 }
+                // grey (ghost rect)
+                else if (red == 128 && green == 128 && blue == 128) {
+                    tiles = append(new Tile(left + px*tileW,top + py*tileH, tileW, tileH, Tile.RECT), tiles);
+                    tiles[tiles.length - 1].rectType = Tile.RECT_GHOST;
+                    rectTiles = append(new Tile(left + px*tileW,top + py*tileH, tileW, tileH, Tile.RECT), rectTiles);
+                    rectTiles[rectTiles.length - 1].rectType = Tile.RECT_GHOST;
+                }
+
             }
         }
     }
@@ -113,6 +140,8 @@ public class Level {
     }
 
     public void drawBackground(Canvas canvas) {
+//        // debug
+//        System.out.println("drawBackGround() level: " + level);
         if (bgBitmap != null) {
             canvas.drawBitmap(bgBitmap, (float) left, (float) top, null);
         }
