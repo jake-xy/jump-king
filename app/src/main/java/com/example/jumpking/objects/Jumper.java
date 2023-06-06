@@ -349,25 +349,25 @@ public class Jumper {
                 if (rect.collides(slopeTile)) {
                     int[] airDir = slopeTile.getAirDir(level.rectTiles);
 
-                    if (airDir[0] == 1) {
+                    if (airDir[0] == 1) { //   slope --> |\
                         // left collision
                         if (xVel < 0 && rect.left < slopeTile.centerX) {
                             // adjust x
                             rect.setX(slopeTile.centerX);
                         }
                         // right collision
-                        else if (xVel > 0) {
+                        else if (xVel > 0 && onGround) {
                             rect.setX(slopeTile.left - rect.w);
                         }
                     }
-                    else if (airDir[0] == -1) {
+                    else if (airDir[0] == -1) { //  slope --> /|
                         // right collision
                         if (xVel > 0 && rect.right > slopeTile.centerX) {
                             // adjust x
                             rect.setX(slopeTile.centerX - rect.w);
                         }
                         // left collision
-                        else if (xVel < 0) {
+                        else if (xVel < 0 && onGround) {
                             rect.setX(slopeTile.right);
                         }
                     }
