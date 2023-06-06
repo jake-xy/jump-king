@@ -27,7 +27,7 @@ public class MainLoop {
     Level[] levels = new Level[164];
 
     private boolean showTiles = false;
-    public XButton lButton, rButton, uButton;
+    public XButton lButton, rButton, uButton, pauseButton;
 
     public MainLoop(Game game) {
         this.game = game;
@@ -73,6 +73,7 @@ public class MainLoop {
         lButton = new XButton(game, R.drawable.left, (int) game.scaledX(50), (int) (game.getHeight()-bHeight*1.5), (int) bHeight);
         rButton = new XButton(game, R.drawable.right, (int) (lButton.getX() + lButton.getWidth()*1.5), (int) lButton.getY(), (int) bHeight);
         uButton = new XButton(game, R.drawable.up, (int) (game.getWidth() - rButton.getWidth()), (int) rButton.getY(), (int) bHeight);
+        pauseButton = new XButton(game, R.drawable.pause, (int) (uButton.getX()), (int) (lButton.getHeight()*0.5), (int) bHeight);
     }
 
 
@@ -96,9 +97,9 @@ public class MainLoop {
             king.stopMoving();
         }
 
-        // debug
-        if (lButton.pressedDown && rButton.pressedDown) {
+        if (pauseButton.pressedDown) {
             pause();
+            pauseButton.release();
         }
 
         king.update(currentLevel);
@@ -141,6 +142,8 @@ public class MainLoop {
         lButton.draw(canvas);
         rButton.draw(canvas);
         uButton.draw(canvas);
+
+        pauseButton.draw(canvas);
 
         if (lButton.pressedDown) {
             Paint paint = new Paint();
@@ -202,6 +205,9 @@ public class MainLoop {
                 if (uButton.press((int) event.getX(acID), (int) event.getY(acID))) {
                     uButton.pointerID = event.getPointerId(acID);
                 }
+                if (pauseButton.press((int) event.getX(acID), (int) event.getY(acID))) {
+                    pauseButton.pointerID = event.getPointerId(acID);
+                }
                 return true;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_POINTER_UP:
@@ -222,13 +228,13 @@ public class MainLoop {
 
     public void pause() {
         this.active = false;
-        game.pausePanel.active = true;
-        game.pausePanel.visible = true;
+        game.pausePanel.activate(pauseButton);
     }
 
     public void resume() {
         this.active = true;
         game.pausePanel.active = false;
         game.pausePanel.visible = false;
+        game.prevTime = System.currentTimeMillis();
     }
 }
